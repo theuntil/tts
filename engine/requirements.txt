@@ -1,0 +1,10 @@
+# PyTorch (CPU) Dockerfile'da ayrı kurulur
+ema-lightning==1.1.2
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30
+pydantic>=2.7
+numpy>=1.26
+soundfile>=0.13
+librosa>=0.10
+soxr>=0.3
+huggingface_hub>=0.24

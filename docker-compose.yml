@@ -1,0 +1,65 @@
+# Tını: Dokploy'da "Compose" servisi olarak kurulur.
+#   engine : ses modeli (EMA Lightning + Ahenk Cep). Dışarıya açılmaz.
+#   app    : API + yönetim paneli + veritabanı + dosyalar. İki domain bu servise bağlanır:
+#            panel.alanadiniz.com -> app:8000   ve   api.alanadiniz.com -> app:8000
+#
+# Ağ: yeni Docker ağı açılmaz; Dokploy'un "dokploy-network" ağı kullanılır. Servisler birbirine
+# benzersiz adlarla ulaşır (tini-engine), aynı ağdaki başka projelerle karışmaz.
+# Değerler Dokploy > Environment sekmesinden gelir (.env.example'a bakın).
+
+services:
+  engine:
+    build: ./engine
+    restart: unless-stopped
+    environment:
+      ENGINE_TOKEN: ${ENGINE_TOKEN:?ENGINE_TOKEN gerekli}
+      TORCH_THREADS: ${TORCH_THREADS:-6}
+      ENABLE_AHENK_CEP: ${ENABLE_AHENK_CEP:-true}
+      ENGINE_GROUP_PIECES: ${ENGINE_GROUP_PIECES:-3}
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - tini-models:/models
+    expose:
+      - "9000"
+    networks:
+      default:
+        aliases:
+          - tini-engine
+    deploy:
+      resources:
+        limits:
+          memory: ${ENGINE_MEMORY_LIMIT:-6g}
+
+  app:
+    build: ./app
+    restart: unless-stopped
+    depends_on:
+      - engine
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY gerekli}
+      ENGINE_URL: http://tini-engine:9000
+      ENGINE_TOKEN: ${ENGINE_TOKEN:?ENGINE_TOKEN gerekli}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL gerekli}
+      ADMIN_NAME: ${ADMIN_NAME:-Yönetici}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD gerekli}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-}
+      PANEL_HOSTS: ${PANEL_HOSTS:-}
+      API_HOSTS: ${API_HOSTS:-}
+      TZ: ${TZ:-Europe/Istanbul}
+    volumes:
+      - tini-data:/data
+    expose:
+      - "8000"
+    networks:
+      default:
+        aliases:
+          - tini-app
+
+networks:
+  default:
+    name: dokploy-network
+    external: true
+
+volumes:
+  tini-models:
+  tini-data:
